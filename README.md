@@ -1,4 +1,4 @@
-# WatchDucker 🐤
+# WatchDucker 🐤🦆
 
 一个用 Go 语言编写的 Docker 容器镜像更新检查和自动更新工具。
 
@@ -13,6 +13,7 @@
 - 🚫 **灵活控制**: 提供只检查不重启的选项
 - ✨ **实时反馈**: 检查过程中提供实时进度和结果输出
 - 🐳 **Docker 原生**: 完全基于 Docker API，无需额外依赖
+- ⚙️ **无需代理**: 复用现有 Docker 配置，无需额外配置认证和代理、[加速镜像源](https://github.com/dongyubin/DockerHub)
 
 ## 🚀 快速开始
 
@@ -36,31 +37,40 @@ go build -o watchducker .
 
 ## 📖 使用方法
 
-### 基础使用
+### Docker
+
+```bash
+# 检查指定容器
+docker run --rm -v /var/run/docker.sock:/var/run/docker.sock naomi233/watchducker:latest watchducker nginx redis mysql
+# 检查所有带有更新标签的容器
+docker run --rm -v /var/run/docker.sock:/var/run/docker.sock naomi233/watchducker:latest watchducker --label
+# 只更新镜像，不重启容器
+docker run --rm -v /var/run/docker.sock:/var/run/docker.sock naomi233/watchducker:latest watchducker --no-restart nginx redis
+# 使用标签模式，同时防止自动重启
+docker run --rm -v /var/run/docker.sock:/var/run/docker.sock naomi233/watchducker:latest watchducker --label --no-restart
+# 每天凌晨2点检查所有标签容器
+docker run --name watchducker -v /var/run/docker.sock:/var/run/docker.sock naomi233/watchducker:latest watchducker --cron "0 2 * * *" --label
+# 每30分钟检查指定容器
+docker run --name watchducker -v /var/run/docker.sock:/var/run/docker.sock naomi233/watchducker:latest watchducker --cron "*/30 * * * *" nginx redis
+# 每天执行，只检查不重启
+docker run --name watchducker -v /var/run/docker.sock:/var/run/docker.sock naomi233/watchducker:latest watchducker --cron "@daily" --no-restart nginx
+```
+
+### 可执行文件
 
 ```bash
 # 检查指定容器
 watchducker nginx redis mysql
-
 # 检查所有带有更新标签的容器
 watchducker --label
-
 # 只更新镜像，不重启容器
 watchducker --no-restart nginx redis
-
 # 使用标签模式，同时防止自动重启
 watchducker --label --no-restart
-```
-
-### 定时执行模式
-
-```bash
 # 每天凌晨2点检查所有标签容器
 watchducker --cron "0 2 * * *" --label
-
 # 每30分钟检查指定容器
 watchducker --cron "*/30 * * * *" nginx redis
-
 # 每天执行，只检查不重启
 watchducker --cron "@daily" --no-restart nginx
 ```
@@ -96,25 +106,6 @@ export WATCHDUCKER_LOG_LEVEL=DEBUG
 
 ```bash
 docker run --name nginx --label watchducker.update=true nginx:latest
-```
-
-## 📋 配置示例
-
-### 单次检查
-
-```bash
-# 检查三个指定容器
-watchducker nginx redis mysql
-```
-
-### 定时检查示例
-
-```bash
-# 每天凌晨2点检查所有标签容器，自动重启
-watchducker --cron "0 2 * * *" --label
-
-# 每30分钟检查一次，只更新镜像
-watchducker --cron "*/30 * * * *" --no-restart --label
 ```
 
 ## 🏗️ 项目架构
@@ -156,7 +147,7 @@ watchducker/
 
 ### 依赖要求
 
-- Go 1.25.3 或更高版本
+- Go 1.25 或更高版本
 - Docker 守护进程（用于容器操作）
 - 网络连接（用于镜像仓库访问）
 
