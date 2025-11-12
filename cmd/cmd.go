@@ -117,6 +117,13 @@ func RunChecker(ctx context.Context, checkFunc func(*core.Checker) (*types.Batch
 		if err != nil {
 			logger.Error("容器更新过程中出现错误: %v", err)
 		}
+
+		// 如果启用了清理功能，清理悬空镜像
+		if cfg.CleanUp() {
+			if err := operator.CleanDanglingImages(ctx); err != nil {
+				logger.Error("清理悬空镜像失败: %v", err)
+			}
+		}
 	}
 
 	// 输出最终结果

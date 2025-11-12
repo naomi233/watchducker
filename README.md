@@ -44,8 +44,8 @@ go build -o watchducker .
 docker run --rm -v /var/run/docker.sock:/var/run/docker.sock naomi233/watchducker:latest watchducker --once nginx redis mysql
 # 检查所有带有更新标签的容器一次
 docker run --rm -v /var/run/docker.sock:/var/run/docker.sock naomi233/watchducker:latest watchducker --label --once
-# 检查所有容器一次
-docker run --rm -v /var/run/docker.sock:/var/run/docker.sock naomi233/watchducker:latest watchducker --all --once
+# 检查所有容器一次，更新后清理悬空镜像
+docker run --rm -v /var/run/docker.sock:/var/run/docker.sock naomi233/watchducker:latest watchducker --all --clean --once
 # 只更新镜像，不重启容器
 docker run --rm -v /var/run/docker.sock:/var/run/docker.sock naomi233/watchducker:latest watchducker --no-restart --once nginx redis
 # 使用标签模式，同时防止自动重启
@@ -65,8 +65,8 @@ docker run --name watchducker -v /var/run/docker.sock:/var/run/docker.sock naomi
 watchducker --once nginx redis mysql
 # 检查所有带有更新标签的容器一次
 watchducker --label --once
-# 检查所有容器一次
-watchducker --all --once
+# 检查所有容器一次，更新后清理悬空镜像
+watchducker --all --clean --once
 # 只更新镜像，不重启容器
 watchducker --no-restart --once nginx redis
 # 使用标签模式，同时防止自动重启
@@ -103,6 +103,7 @@ services:
 - `--label`: 检查所有带有 `watchducker.update=true` 标签的容器
 - `--no-restart`: 只更新镜像，不重启容器
 - `--all`: 检查所有容器
+- `--clean`: 更新容器后自动清理悬空镜像
 - `--cron`: 定时执行，使用标准 [cron 表达式](https://crontab.guru) 格式，默认 "0 2 * * *"
 - `--once`: 只执行一次检查和更新，然后退出
 - 容器名称列表
@@ -118,6 +119,9 @@ export WATCHDUCKER_ALL=true
 
 # 等同于 --no-restart 选项
 export WATCHDUCKER_NO_RESTART=true
+
+# 等同于 --clean 选项
+export WATCHDUCKER_CLEAN=true
 
 # 等同于 --cron 选项
 export WATCHDUCKER_CRON="0 2 * * *"

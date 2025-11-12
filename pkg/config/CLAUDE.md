@@ -2,7 +2,7 @@
 
 # config - 配置管理模块
 
-> 更新时间：2025-11-11 14:11:43
+> 更新时间：2025-11-12 15:30:00
 
 ## 模块职责
 
@@ -45,6 +45,7 @@ if cfg.CheckLabel() {
 - `RunOnce() bool` - 是否单次执行模式
 - `CronExpression() string` - 获取 cron 表达式
 - `ContainerNames() []string` - 获取容器名称列表
+- `CleanUp() bool` - 是否在更新后清理悬空镜像
 
 ## 关键依赖与配置
 
@@ -63,6 +64,7 @@ if cfg.CheckLabel() {
 - `WATCHDUCKER_ALL` - 等同于 `--all`
 - `WATCHDUCKER_NO_RESTART` - 等同于 `--no-restart`
 - `WATCHDUCKER_CRON` - 等同于 `--cron`
+- `WATCHDUCKER_CLEAN` - 等同于 `--clean`
 - `WATCHDUCKER_LOG_LEVEL` - 设置日志级别
 
 ## 数据模型
@@ -76,6 +78,7 @@ type Config struct {
     runOnce        bool     // 单次执行模式
     cronExpression string   // cron 表达式
     containerNames []string // 容器名称列表
+    cleanUp        bool     // 清理悬空镜像标识
     logLevel       string   // 日志级别
 }
 ```
@@ -120,6 +123,12 @@ A: 当前主要支持命令行和环境变量，可以根据需要扩展配置�
 - `config.go` - 配置管理的主要实现
 
 ## 变更记录 (Changelog)
+
+### 2025-11-12 15:30:00
+- 添加 `--clean` 参数支持，用于在容器更新后清理悬空镜像
+- 添加 `CleanUp()` getter 方法
+- 添加 `WATCHDUCKER_CLEAN` 环境变量支持
+- 更新配置结构体添加 `cleanUp` 字段
 
 ### 2025-11-11 14:11:43
 - 初始化模块文档

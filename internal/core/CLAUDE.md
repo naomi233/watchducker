@@ -2,7 +2,7 @@
 
 # core - 核心业务逻辑模块
 
-> 更新时间：2025-11-11 14:11:43
+> 更新时间：2025-11-12 15:30:00
 
 ## 模块职责
 
@@ -41,6 +41,7 @@ defer operator.Close()
 
 ### Operator 主要方法
 - `UpdateContainersByBatchCheckResult(ctx, result)` - 根据检查结果更新容器
+- `CleanDanglingImages(ctx)` - 清理悬空镜像
 - `Close()` - 清理资源
 
 ## 关键依赖与配置
@@ -56,6 +57,7 @@ defer operator.Close()
 2. **镜像检查**: 并发检查镜像仓库获取更新信息
 3. **结果汇总**: 收集检查结果和统计信息
 4. **容器更新**: 停止旧容器 → 使用新镜像创建新容器 → 启动新容器
+5. **镜像清理**: 在启用 `--clean` 参数时，清理悬空镜像
 
 ## 数据模型
 
@@ -97,6 +99,11 @@ A: 当前未实现回滚机制，建议在生产环境前充分测试
 - `operator.go` - 容器操作器实现
 
 ## 变更记录 (Changelog)
+
+### 2025-11-12 15:30:00
+- 扩展 Operator 结构体，添加 `imageSvc` 字段
+- 添加 `CleanDanglingImages()` 方法，支持悬空镜像清理
+- 更新 `NewOperator()` 函数，初始化 ImageService
 
 ### 2025-11-11 14:11:43
 - 初始化模块文档

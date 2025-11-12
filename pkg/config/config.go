@@ -16,8 +16,8 @@ type Config struct {
 	runOnce        bool     `mapstructure:"-"`
 	cronExpression string   `mapstructure:"cron"`
 	containerNames []string `mapstructure:"-"` // 位置参数，不通过mapstructure绑定
-	noRestart      bool     `mapstructure:"no-restart"`
-	cleanUpOld     bool     `mapstructure:"-"`
+	noRestart      bool     `mapstructure:"no_restart"`
+	cleanUp        bool     `mapstructure:"clean_up"`
 	logLevel       string   `mapstructure:"log_level"`
 }
 
@@ -80,6 +80,11 @@ func (c *Config) LogLevel() string {
 	return c.logLevel
 }
 
+// CleanUp 获取 CleanUp 配置
+func (c *Config) CleanUp() bool {
+	return c.cleanUp
+}
+
 // loadConfig 执行实际的配置加载逻辑
 func loadConfig() (*Config, error) {
 	// 创建 Viper 实例
@@ -92,6 +97,7 @@ func loadConfig() (*Config, error) {
 	v.SetDefault("all", false)
 	v.SetDefault("no-restart", false)
 	v.SetDefault("cron", "0 2 * * *")
+	v.SetDefault("clean", false)
 
 	// 设置命令行参数
 	pflag.Bool("label", false, "检查所有带有 watchducker.update=true 标签的容器")
@@ -99,6 +105,7 @@ func loadConfig() (*Config, error) {
 	pflag.Bool("no-restart", false, "只更新镜像，不重启容器")
 	pflag.Bool("once", false, "只执行一次检查和更新，然后退出")
 	pflag.String("cron", "0 2 * * *", "定时执行，使用标准 cron 表达式格式")
+	pflag.Bool("clean", false, "更新容器后自动清理悬空镜像")
 
 	// 解析命令行参数
 	pflag.Parse()
@@ -115,6 +122,7 @@ func loadConfig() (*Config, error) {
 		cronExpression: v.GetString("cron"),
 		// 获取位置参数（容器名称）
 		containerNames: pflag.Args(),
+		cleanUp:        v.GetBool("clean"),
 		logLevel:       v.GetString("LOG_LEVEL"),
 	}
 
@@ -153,12 +161,14 @@ func PrintUsage() {
 	fmt.Println("  --no-restart  只更新镜像，不重启容器")
 	fmt.Println("  --cron        定时执行，使用标准 cron 表达式格式，默认为 \"0 2 * * *\"")
 	fmt.Println("  --once        只执行一次检查和更新，然后退出")
+	fmt.Println("  --clean       更新容器后自动清理悬空镜像")
 	fmt.Println()
 	fmt.Println("环境变量:")
 	fmt.Println("  WATCHDUCKER_LABEL        等同于 --label 选项")
 	fmt.Println("  WATCHDUCKER_ALL          等同于 --all 选项")
 	fmt.Println("  WATCHDUCKER_NO_RESTART   等同于 --no-restart 选项")
 	fmt.Println("  WATCHDUCKER_CRON         等同于 --cron 选项，默认为 0 2 * * *")
+	fmt.Println("  WATCHDUCKER_CLEAN        等同于 --clean 选项")
 	fmt.Println("  WATCHDUCKER_LOG_LEVEL    设置日志级别 (DEBUG/INFO/WARN/ERROR)")
 	fmt.Println()
 	fmt.Println("参数:")
@@ -185,6 +195,7 @@ func PrintUsage() {
 	fmt.Println("  watchducker --cron \"*/30 * * * *\" nginx redis   # 每30分钟检查指定容器")
 	fmt.Println("  watchducker --cron \"@daily\" --all               # 每天检查所有容器")
 	fmt.Println("  watchducker --cron \"@daily\" --no-restart        # 每天执行，只检查不重启")
+	fmt.Println("  watchducker --cron \"@daily\" --clean             # 每天执行并清理悬空镜像")
 	fmt.Println()
 	fmt.Println("说明:")
 	fmt.Println("  - 优先级：指定容器 > --label > --all")

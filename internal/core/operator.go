@@ -19,6 +19,7 @@ type Operator struct {
 	clientManager   *docker.ClientManager
 	containerSvc    *docker.ContainerService
 	containerOpsSvc *docker.ContainerService
+	imageSvc        *docker.ImageService
 }
 
 // NewOperator 创建新的更新器实例
@@ -30,11 +31,13 @@ func NewOperator() (*Operator, error) {
 
 	containerSvc := docker.NewContainerService(clientManager)
 	containerOpsSvc := docker.NewContainerService(clientManager)
+	imageSvc := docker.NewImageService(clientManager)
 
 	return &Operator{
 		clientManager:   clientManager,
 		containerSvc:    containerSvc,
 		containerOpsSvc: containerOpsSvc,
+		imageSvc:        imageSvc,
 	}, nil
 }
 
@@ -169,6 +172,19 @@ func (c *Operator) UpdateContainersByBatchCheckResult(ctx context.Context, resul
 		return err
 	}
 
+	return nil
+}
+
+// CleanDanglingImages 清理悬空镜像
+func (u *Operator) CleanDanglingImages(ctx context.Context) error {
+	logger.Info("开始清理悬空镜像")
+
+	err := u.imageSvc.CleanDanglingImages(ctx)
+	if err != nil {
+		return fmt.Errorf("清理悬空镜像失败: %w", err)
+	}
+
+	logger.Info("悬空镜像清理完成")
 	return nil
 }
 
