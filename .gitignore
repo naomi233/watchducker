@@ -17,5 +17,7 @@ tmp/
 temp/
 logs/
 
+dist/
+
 watchducker
 watchducker.exe

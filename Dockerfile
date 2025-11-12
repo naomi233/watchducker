@@ -1,13 +1,13 @@
-FROM golang:1.25-alpine AS builder
-ENV GO111MODULE=on
-WORKDIR /app
-COPY go.mod go.sum ./
-RUN go mod download
-COPY . .
-RUN GOOS=linux go build -o watchducker .
-
 FROM alpine:latest
+
+WORKDIR /app
+ARG TARGETPLATFORM
+
 RUN apk add --no-cache tzdata
-COPY --from=builder /app/watchducker /usr/local/bin/
+
+COPY $TARGETPLATFORM/watchducker /app
+
+RUN chmod +x /app/watchducker && \
+    ln -s /app/watchducker /usr/local/bin/watchducker
 
 CMD ["watchducker"]
