@@ -52,6 +52,19 @@ func CreateCheckCallback() types.CheckCallback {
 	}
 }
 
+func GetUpdateSummary(result *types.BatchCheckResult) string {
+	var summary string
+	summary += "\n=== 更新信息 ===\n"
+	for _, item := range result.Images {
+		if item.IsUpdated && item.Error == "" {
+			summary += fmt.Sprintf("镜像 %-20s 更新成功✅\n", item.Name)
+		} else if item.Error != "" {
+			summary += fmt.Sprintf("镜像 %-20s 更新失败❌: %s\n", item.Name, item.Error)
+		}
+	}
+	return summary
+}
+
 // PrintWelcome 打印欢迎信息
 func PrintWelcome() {
 	fmt.Println("========================================")

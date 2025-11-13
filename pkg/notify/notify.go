@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"net/smtp"
 	"net/url"
+	"os"
 	"strings"
 	"time"
 	"watchducker/pkg/logger"
@@ -111,21 +112,13 @@ type Config struct {
 var cfg Config
 
 // ================== 配置加载 ==================
-func loadConfig() error {
-	// Use current working directory instead of executable path
-	configPath := "push.yaml"
-
+func loadConfig(configPath string) error {
 	v := viper.New()
 	v.SetConfigFile(configPath)
 	v.SetConfigType("yaml")
 
-	// 支持环境变量覆盖
-	v.AutomaticEnv()
-
 	if err := v.ReadInConfig(); err != nil {
 		logger.Error("配置文件读取失败: %v", err)
-	} else {
-		logger.Info("使用配置文件: %s", v.ConfigFileUsed())
 	}
 
 	if err := v.Unmarshal(&cfg); err != nil {
@@ -428,15 +421,29 @@ func discord(title, msg string) {
 }
 
 // ================== 主逻辑 ==================
-func pushAll(msg string) {
-	err := loadConfig()
+func Send(title, msg string) {
+	// 使用当前工作目录下的 push.yaml 作为配置文件
+	configPath := "push.yaml"
+
+	if _, err := os.Stat(configPath); err != nil {
+		if os.IsNotExist(err) {
+			logger.Info("未找到推送配置文件，跳过推送")
+			return
+		}
+	}
+
+	err := loadConfig(configPath)
 	if err != nil {
 		logger.Error("加载配置失败: %v", err)
 		return
 	}
 
-	title := "test notification"
 	servers := cfg.Setting.PushServer
+	if servers == "" {
+		logger.Info("未配置任何推送方式，跳过推送")
+		return
+	}
+
 	for _, s := range strings.Split(strings.ToLower(servers), ",") {
 		switch strings.TrimSpace(s) {
 		case "telegram":
@@ -475,8 +482,4 @@ func pushAll(msg string) {
 			logger.Warn("未知推送方式: %s", s)
 		}
 	}
-}
-
-func main() {
-	pushAll(fmt.Sprintf("推送验证 %d", time.Now().Unix()))
 }

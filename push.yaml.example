@@ -1,0 +1,70 @@
+setting:
+  push_server: "telegram"  # 推送服务列表（支持多渠道用,分开）
+  log_level: "DEBUG"  # 日志级别：DEBUG/INFO/WARN/ERROR
+
+telegram:
+  api_url: "api.telegram.org"  # Telegram API地址（支持反代）
+  bot_token: ""  # 机器人Token
+  chat_id: ""  # 聊天ID
+
+ftqq:
+  push_token: ""  # FTQQ推送Token
+
+pushplus:
+  push_token: ""  # PushPlus推送Token
+
+cqhttp:
+  cqhttp_url: ""  # CQHTTP服务地址
+  cqhttp_qq: 0  # QQ号码
+
+smtp:
+  mailhost: ""  # SMTP服务器地址
+  port: "587"  # SMTP端口
+  fromaddr: ""  # 发件人邮箱
+  toaddr: ""  # 收件人邮箱
+  username: ""  # 邮箱用户名
+  password: ""  # 邮箱密码/授权码
+
+wecom:
+  wechat_id: ""  # 企业微信ID
+  secret: ""  # 应用Secret
+  agentid: ""  # 应用AgentId
+  touser: ""  # 接收用户ID
+
+wecomrobot:
+  url: ""  # 企业微信群机器人Webhook URL
+  mobile: ""  # 需要@的手机号（可选）
+
+pushdeer:
+  api_url: ""  # PushDeer服务器地址
+  token: ""  # PushDeer推送Token
+
+dingrobot:
+  webhook: ""  # 钉钉机器人Webhook地址
+  secret: ""  # 钉机器人签名密钥
+
+feishubot:
+  webhook: ""  # 飞书机器人Webhook地址
+
+bark:
+  api_url: ""  # Bark服务器地址
+  token: ""  # Bark设备Key
+
+gotify:
+  api_url: ""  # Gotify服务器地址
+  token: ""  # Gotify应用Token
+  priority: 0  # 消息优先级
+
+ifttt:
+  event: ""  # IFTTT事件名称
+  key: ""  # IFTTT Webhook Key
+
+webhook:
+  webhook_url: ""  # 自定义Webhook地址
+
+qmsg:
+  key: ""  # Qmsg酱推送Key
+
+discord:
+  webhook: ""  # Discord Webhook地址
+  verify_ssl: true  # 是否验证SSL证书

@@ -7,6 +7,7 @@ import (
 	"watchducker/internal/types"
 	"watchducker/pkg/config"
 	"watchducker/pkg/logger"
+	"watchducker/pkg/notify"
 	"watchducker/pkg/utils"
 
 	"github.com/robfig/cron/v3"
@@ -124,6 +125,8 @@ func RunChecker(ctx context.Context, checkFunc func(*core.Checker) (*types.Batch
 				logger.Error("清理悬空镜像失败: %v", err)
 			}
 		}
+
+		notify.Send("WatchDucker 镜像更新", utils.GetUpdateSummary(result))
 	}
 
 	// 输出最终结果
