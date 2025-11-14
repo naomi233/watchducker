@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"watchducker/internal/types"
@@ -35,6 +36,35 @@ func (is *ImageService) getImageList(ctx context.Context, imageName string) ([]i
 	return cli.ImageList(ctx, image.ListOptions{
 		Filters: filter,
 	})
+}
+
+// NormalizeReference 根据镜像ID或匿名标记解析出可拉取的引用
+func (is *ImageService) NormalizeReference(ctx context.Context, imageName string) (string, error) {
+	if imageName == "" {
+		return "", fmt.Errorf("镜像名称为空")
+	}
+
+	if strings.HasPrefix(imageName, "sha256:") || imageName == "<none>:<none>" {
+		cli := is.clientManager.GetClient()
+		inspect, _, err := cli.ImageInspectWithRaw(ctx, imageName)
+		if err != nil {
+			return "", fmt.Errorf("根据镜像ID解析引用失败: %w", err)
+		}
+
+		for _, tag := range inspect.RepoTags {
+			if tag != "" && tag != "<none>:<none>" {
+				return tag, nil
+			}
+		}
+
+		if len(inspect.RepoDigests) > 0 {
+			return inspect.RepoDigests[0], nil
+		}
+
+		return "", fmt.Errorf("镜像 %s 未关联任何标签或摘要，请重新拉取或为镜像打标签", imageName)
+	}
+
+	return imageName, nil
 }
 
 // GetLocalHash 获取本地镜像的哈希值

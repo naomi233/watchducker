@@ -12,6 +12,8 @@ import (
 	"net/http"
 	"net/smtp"
 	"net/url"
+	"os"
+	"reflect"
 	"strings"
 	"time"
 	"watchducker/pkg/logger"
@@ -121,10 +123,12 @@ func loadConfig(configPath string) error {
 	v.SetEnvPrefix("WATCHDUCKER")
 	v.AutomaticEnv()
 	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
+	bindEnvsForConfig(v)
 
 	if err := v.ReadInConfig(); err != nil {
 		var notFound viper.ConfigFileNotFoundError
-		if errors.As(err, &notFound) {
+		var pathErr *os.PathError
+		if errors.As(err, &notFound) || errors.As(err, &pathErr) {
 			logger.Info("未找到配置文件 %s，仅使用环境变量", configPath)
 		} else {
 			logger.Error("配置文件读取失败: %v", err)
@@ -141,6 +145,34 @@ func loadConfig(configPath string) error {
 	}
 
 	return nil
+}
+
+func bindEnvsForConfig(v *viper.Viper) {
+	bindStructFields(v, "", reflect.TypeOf(Config{}))
+}
+
+func bindStructFields(v *viper.Viper, prefix string, t reflect.Type) {
+	for i := 0; i < t.NumField(); i++ {
+		field := t.Field(i)
+		tag := field.Tag.Get("mapstructure")
+		if tag == "" || tag == "-" {
+			continue
+		}
+
+		key := tag
+		if prefix != "" {
+			key = prefix + "." + tag
+		}
+
+		if field.Type.Kind() == reflect.Struct {
+			bindStructFields(v, key, field.Type)
+			continue
+		}
+
+		if err := v.BindEnv(key); err != nil {
+			logger.Warn("绑定环境变量 %s 失败: %v", key, err)
+		}
+	}
 }
 
 // ================== HTTP 工具 ==================

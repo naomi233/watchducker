@@ -17,10 +17,11 @@ type Checker struct {
 	clientManager *docker.ClientManager
 	containerSvc  *docker.ContainerService
 	imageSvc      *docker.ImageService
+	includeStopped bool
 }
 
 // NewChecker 创建新的检查器实例
-func NewChecker() (*Checker, error) {
+func NewChecker(includeStopped bool) (*Checker, error) {
 	clientManager, err := docker.NewClientManager()
 	if err != nil {
 		return nil, fmt.Errorf("创建 Docker 客户端管理器失败: %w", err)
@@ -30,9 +31,10 @@ func NewChecker() (*Checker, error) {
 	imageSvc := docker.NewImageService(clientManager)
 
 	return &Checker{
-		clientManager: clientManager,
-		containerSvc:  containerSvc,
-		imageSvc:      imageSvc,
+		clientManager:  clientManager,
+		containerSvc:   containerSvc,
+		imageSvc:       imageSvc,
+		includeStopped: includeStopped,
 	}, nil
 }
 
@@ -41,7 +43,7 @@ func (c *Checker) CheckByName(ctx context.Context, containerNames []string) (*ty
 	logger.Info("开始根据容器名称检查镜像更新: %v", containerNames)
 
 	// 获取所有指定名称的容器
-	containers, err := c.containerSvc.GetByName(ctx, containerNames)
+	containers, err := c.containerSvc.GetByName(ctx, containerNames, c.includeStopped)
 	if err != nil {
 		return nil, fmt.Errorf("获取容器失败: %w", err)
 	}
@@ -55,7 +57,7 @@ func (c *Checker) CheckByLabel(ctx context.Context, labelKey, labelValue string)
 	logger.Info("开始根据标签检查镜像更新: %s=%s", labelKey, labelValue)
 
 	// 获取所有带有指定标签的容器
-	containers, err := c.containerSvc.GetByLabel(ctx, labelKey, labelValue)
+	containers, err := c.containerSvc.GetByLabel(ctx, labelKey, labelValue, c.includeStopped)
 	if err != nil {
 		return nil, fmt.Errorf("获取标签容器失败: %w", err)
 	}
@@ -69,7 +71,7 @@ func (c *Checker) CheckAll(ctx context.Context) (*types.BatchCheckResult, error)
 	logger.Info("开始检查所有容器的镜像更新")
 
 	// 获取所有容器
-	containers, err := c.containerSvc.GetAll(ctx)
+	containers, err := c.containerSvc.GetAll(ctx, c.includeStopped)
 	if err != nil {
 		return nil, fmt.Errorf("获取所有容器失败: %w", err)
 	}
@@ -94,9 +96,15 @@ func (c *Checker) checkImages(ctx context.Context, containers []types.ContainerI
 	logger.Info("找到 %d 个容器，开始检查镜像更新", len(containers))
 
 	// 提取唯一的镜像名称
-	imageNames := c.containerSvc.ExtractUniqueImages(containers)
-	result.Summary.TotalImages = len(imageNames)
-	logger.Debug("提取到 %d 个唯一镜像: %v", len(imageNames), imageNames)
+	imageNames, skipped := c.extractImageReferences(ctx, containers)
+	result.Images = append(result.Images, skipped...)
+	if callback != nil {
+		for _, skippedResult := range skipped {
+			callback(skippedResult)
+		}
+	}
+	result.Summary.TotalImages = len(imageNames) + len(skipped)
+	logger.Debug("提取到 %d 个可检查镜像: %v", len(imageNames), imageNames)
 
 	// 并发检查所有镜像
 	var wg sync.WaitGroup
@@ -169,6 +177,35 @@ func (c *Checker) checkImages(ctx context.Context, containers []types.ContainerI
 	}
 
 	return result, nil
+}
+
+func (c *Checker) extractImageReferences(ctx context.Context, containers []types.ContainerInfo) ([]string, []*types.ImageCheckResult) {
+	imageSet := make(map[string]struct{})
+	var images []string
+	var skipped []*types.ImageCheckResult
+
+	for _, container := range containers {
+		normalized, err := c.imageSvc.NormalizeReference(ctx, container.Image)
+		if err != nil {
+			msg := fmt.Sprintf("容器 %s 的镜像 %s 无法解析: %v", container.Name, container.Image, err)
+			logger.Warn(msg)
+			skipped = append(skipped, &types.ImageCheckResult{
+				Name:      container.Image,
+				Error:     msg,
+				CheckedAt: time.Now(),
+			})
+			continue
+		}
+
+		if _, exists := imageSet[normalized]; exists {
+			continue
+		}
+
+		imageSet[normalized] = struct{}{}
+		images = append(images, normalized)
+	}
+
+	return images, skipped
 }
 
 // Close 关闭所有资源

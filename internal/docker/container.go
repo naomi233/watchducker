@@ -38,12 +38,12 @@ func (cs *ContainerService) createContainerInfo(container dockerTypes.Container,
 }
 
 // GetByName 根据容器名称获取容器信息
-func (cs *ContainerService) GetByName(ctx context.Context, containerNames []string) ([]types.ContainerInfo, error) {
+func (cs *ContainerService) GetByName(ctx context.Context, containerNames []string, includeStopped bool) ([]types.ContainerInfo, error) {
 	cli := cs.clientManager.GetClient()
 
 	// 获取所有容器列表
 	containers, err := cli.ContainerList(ctx, container.ListOptions{
-		All: true, // 包括停止的容器
+		All: includeStopped,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("获取容器列表失败: %w", err)
@@ -73,7 +73,7 @@ func (cs *ContainerService) GetByName(ctx context.Context, containerNames []stri
 }
 
 // GetByLabel 根据标签获取容器信息
-func (cs *ContainerService) GetByLabel(ctx context.Context, labelKey, labelValue string) ([]types.ContainerInfo, error) {
+func (cs *ContainerService) GetByLabel(ctx context.Context, labelKey, labelValue string, includeStopped bool) ([]types.ContainerInfo, error) {
 	cli := cs.clientManager.GetClient()
 
 	filter := filters.NewArgs()
@@ -86,7 +86,7 @@ func (cs *ContainerService) GetByLabel(ctx context.Context, labelKey, labelValue
 	}
 
 	containers, err := cli.ContainerList(ctx, container.ListOptions{
-		All:     true, // 包括停止的容器
+		All:     includeStopped,
 		Filters: filter,
 	})
 	if err != nil {
@@ -106,21 +106,6 @@ func (cs *ContainerService) GetByLabel(ctx context.Context, labelKey, labelValue
 	}
 
 	return result, nil
-}
-
-// ExtractUniqueImages 从容器列表中提取唯一的镜像名称
-func (cs *ContainerService) ExtractUniqueImages(containers []types.ContainerInfo) []string {
-	imageSet := make(map[string]struct{})
-	var images []string
-
-	for _, container := range containers {
-		if _, exists := imageSet[container.Image]; !exists {
-			imageSet[container.Image] = struct{}{}
-			images = append(images, container.Image)
-		}
-	}
-
-	return images
 }
 
 // StopContainer 停止容器
@@ -195,12 +180,12 @@ func (cos *ContainerService) CreateContainer(ctx context.Context, config *contai
 }
 
 // GetAll 获取所有容器信息
-func (cs *ContainerService) GetAll(ctx context.Context) ([]types.ContainerInfo, error) {
+func (cs *ContainerService) GetAll(ctx context.Context, includeStopped bool) ([]types.ContainerInfo, error) {
 	cli := cs.clientManager.GetClient()
 
 	// 获取所有容器列表
 	containers, err := cli.ContainerList(ctx, container.ListOptions{
-		All: true, // 包括停止的容器
+		All: includeStopped,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("获取容器列表失败: %w", err)

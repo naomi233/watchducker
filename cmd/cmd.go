@@ -89,7 +89,7 @@ func RunChecker(ctx context.Context, checkFunc func(*core.Checker) (*types.Batch
 	cfg := config.Get()
 
 	// 创建检查器
-	checker, err := core.NewChecker()
+	checker, err := core.NewChecker(cfg.IncludeStopped())
 	if err != nil {
 		logger.Fatal("创建检查器失败: %v", err)
 	}

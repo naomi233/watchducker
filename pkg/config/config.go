@@ -19,6 +19,7 @@ type Config struct {
 	noRestart      bool     `mapstructure:"no_restart"`
 	cleanUp        bool     `mapstructure:"clean_up"`
 	logLevel       string   `mapstructure:"log_level"`
+	includeStopped bool     `mapstructure:"include_stopped"`
 }
 
 // 全局配置实例（只读，初始化后不可修改）
@@ -85,6 +86,11 @@ func (c *Config) CleanUp() bool {
 	return c.cleanUp
 }
 
+// IncludeStopped 获取 IncludeStopped 配置
+func (c *Config) IncludeStopped() bool {
+	return c.includeStopped
+}
+
 // loadConfig 执行实际的配置加载逻辑
 func loadConfig() (*Config, error) {
 	// 创建 Viper 实例
@@ -98,6 +104,7 @@ func loadConfig() (*Config, error) {
 	v.SetDefault("no-restart", false)
 	v.SetDefault("cron", "0 2 * * *")
 	v.SetDefault("clean", false)
+	v.SetDefault("include-stopped", false)
 
 	// 设置命令行参数
 	pflag.Bool("label", false, "检查所有带有 watchducker.update=true 标签的容器")
@@ -106,6 +113,7 @@ func loadConfig() (*Config, error) {
 	pflag.Bool("once", false, "只执行一次检查和更新，然后退出")
 	pflag.String("cron", "0 2 * * *", "定时执行，使用标准 cron 表达式格式")
 	pflag.Bool("clean", false, "更新容器后自动清理悬空镜像")
+	pflag.Bool("include-stopped", false, "检查时包含已停止的容器")
 
 	// 解析命令行参数
 	pflag.Parse()
@@ -124,6 +132,7 @@ func loadConfig() (*Config, error) {
 		containerNames: pflag.Args(),
 		cleanUp:        v.GetBool("clean"),
 		logLevel:       v.GetString("LOG_LEVEL"),
+		includeStopped: v.GetBool("include-stopped"),
 	}
 
 	// 设置日志级别
@@ -162,6 +171,7 @@ func PrintUsage() {
 	fmt.Println("  --cron        定时执行，使用标准 cron 表达式格式，默认为 \"0 2 * * *\"")
 	fmt.Println("  --once        只执行一次检查和更新，然后退出")
 	fmt.Println("  --clean       更新容器后自动清理悬空镜像")
+	fmt.Println("  --include-stopped 检查时包含已停止的容器（默认仅检查运行中容器）")
 	fmt.Println()
 	fmt.Println("环境变量:")
 	fmt.Println("  WATCHDUCKER_LABEL        等同于 --label 选项")
@@ -169,6 +179,7 @@ func PrintUsage() {
 	fmt.Println("  WATCHDUCKER_NO_RESTART   等同于 --no-restart 选项")
 	fmt.Println("  WATCHDUCKER_CRON         等同于 --cron 选项，默认为 0 2 * * *")
 	fmt.Println("  WATCHDUCKER_CLEAN        等同于 --clean 选项")
+	fmt.Println("  WATCHDUCKER_INCLUDE_STOPPED  等同于 --include-stopped 选项")
 	fmt.Println("  WATCHDUCKER_LOG_LEVEL    设置日志级别 (DEBUG/INFO/WARN/ERROR)")
 	fmt.Println()
 	fmt.Println("参数:")
