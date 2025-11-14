@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -123,7 +124,12 @@ func loadConfig(configPath string) error {
 	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 
 	if err := v.ReadInConfig(); err != nil {
-		logger.Error("配置文件读取失败: %v", err)
+		var notFound viper.ConfigFileNotFoundError
+		if errors.As(err, &notFound) {
+			logger.Info("未找到配置文件 %s，仅使用环境变量", configPath)
+		} else {
+			logger.Error("配置文件读取失败: %v", err)
+		}
 	}
 
 	if err := v.Unmarshal(&cfg); err != nil {
@@ -429,13 +435,6 @@ func discord(title, msg string) {
 func Send(title, msg string) {
 	// 使用当前工作目录下的 push.yaml 作为配置文件
 	configPath := "push.yaml"
-
-	if _, err := os.Stat(configPath); err != nil {
-		if os.IsNotExist(err) {
-			logger.Info("未找到推送配置文件，跳过推送")
-			return
-		}
-	}
 
 	err := loadConfig(configPath)
 	if err != nil {
