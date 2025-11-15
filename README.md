@@ -119,6 +119,7 @@ services:
 - `--label`: 检查所有带有 `watchducker.update=true` 标签的容器
 - `--no-restart`: 只更新镜像，不重启容器
 - `--all`: 检查所有容器（默认仅包含运行中的容器）
+- `--disabled-containers`: 排除指定的容器，不进行检查和更新（支持逗号分隔多个容器）
 - `--include-stopped`: 在检查时包含已停止的容器
 - `--clean`: 更新容器后自动清理悬空镜像
 - `--cron`: 定时执行，使用标准 [cron 表达式](https://crontab.guru) 格式，默认 "0 2 * * *"
@@ -221,6 +222,9 @@ export WATCHDUCKER_CLEAN=true
 
 # 等同于 --cron 选项
 export WATCHDUCKER_CRON="0 2 * * *"
+
+# 等同于 --disabled-containers 选项
+export WATCHDUCKER_DISABLED_CONTAINERS="container1,container2"
 
 # 设置日志级别 (DEBUG/INFO/WARN/ERROR)
 export WATCHDUCKER_LOG_LEVEL=DEBUG

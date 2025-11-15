@@ -14,9 +14,9 @@ import (
 
 // Checker 核心检查器
 type Checker struct {
-	clientManager *docker.ClientManager
-	containerSvc  *docker.ContainerService
-	imageSvc      *docker.ImageService
+	clientManager  *docker.ClientManager
+	containerSvc   *docker.ContainerService
+	imageSvc       *docker.ImageService
 	includeStopped bool
 }
 
@@ -53,8 +53,9 @@ func (c *Checker) CheckByName(ctx context.Context, containerNames []string) (*ty
 }
 
 // CheckByLabel 根据标签检查镜像更新
-func (c *Checker) CheckByLabel(ctx context.Context, labelKey, labelValue string) (*types.BatchCheckResult, error) {
+func (c *Checker) CheckByLabel(ctx context.Context, labelKey, labelValue string, disabledContainers []string) (*types.BatchCheckResult, error) {
 	logger.Info("开始根据标签检查镜像更新: %s=%s", labelKey, labelValue)
+	logger.Info("被排除的容器: %v", disabledContainers)
 
 	// 获取所有带有指定标签的容器
 	containers, err := c.containerSvc.GetByLabel(ctx, labelKey, labelValue, c.includeStopped)
@@ -62,13 +63,24 @@ func (c *Checker) CheckByLabel(ctx context.Context, labelKey, labelValue string)
 		return nil, fmt.Errorf("获取标签容器失败: %w", err)
 	}
 
+	// 过滤掉被排除的容器
+	filteredContainers := make([]types.ContainerInfo, 0, len(containers))
+	for _, container := range containers {
+		if !utils.SliceContains(disabledContainers, container.Name) {
+			filteredContainers = append(filteredContainers, container)
+		} else {
+			logger.Info("跳过被排除的容器: %s", container.Name)
+		}
+	}
+
 	// 使用通用检查逻辑
-	return c.checkImages(ctx, containers, utils.CreateCheckCallback())
+	return c.checkImages(ctx, filteredContainers, utils.CreateCheckCallback())
 }
 
 // CheckAll 检查所有容器的镜像更新
-func (c *Checker) CheckAll(ctx context.Context) (*types.BatchCheckResult, error) {
+func (c *Checker) CheckAll(ctx context.Context, disabledContainers []string) (*types.BatchCheckResult, error) {
 	logger.Info("开始检查所有容器的镜像更新")
+	logger.Info("被排除的容器: %v", disabledContainers)
 
 	// 获取所有容器
 	containers, err := c.containerSvc.GetAll(ctx, c.includeStopped)
@@ -76,8 +88,18 @@ func (c *Checker) CheckAll(ctx context.Context) (*types.BatchCheckResult, error)
 		return nil, fmt.Errorf("获取所有容器失败: %w", err)
 	}
 
+	// 过滤掉被排除的容器
+	filteredContainers := make([]types.ContainerInfo, 0, len(containers))
+	for _, container := range containers {
+		if !utils.SliceContains(disabledContainers, container.Name) {
+			filteredContainers = append(filteredContainers, container)
+		} else {
+			logger.Info("跳过被排除的容器: %s", container.Name)
+		}
+	}
+
 	// 使用通用检查逻辑
-	return c.checkImages(ctx, containers, utils.CreateCheckCallback())
+	return c.checkImages(ctx, filteredContainers, utils.CreateCheckCallback())
 }
 
 // checkImages 通用的镜像检查逻辑
@@ -179,6 +201,7 @@ func (c *Checker) checkImages(ctx context.Context, containers []types.ContainerI
 	return result, nil
 }
 
+// extractImageReferences 提取容器中的唯一镜像引用
 func (c *Checker) extractImageReferences(ctx context.Context, containers []types.ContainerInfo) ([]string, []*types.ImageCheckResult) {
 	imageSet := make(map[string]struct{})
 	var images []string
@@ -188,7 +211,7 @@ func (c *Checker) extractImageReferences(ctx context.Context, containers []types
 		normalized, err := c.imageSvc.NormalizeReference(ctx, container.Image)
 		if err != nil {
 			msg := fmt.Sprintf("容器 %s 的镜像 %s 无法解析: %v", container.Name, container.Image, err)
-			logger.Warn(msg)
+			logger.Warn("%s", msg)
 			skipped = append(skipped, &types.ImageCheckResult{
 				Name:      container.Image,
 				Error:     msg,

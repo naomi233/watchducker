@@ -17,23 +17,26 @@ import (
 func checkContainersByName(ctx context.Context) {
 	cfg := config.Get()
 	RunChecker(ctx, func(checker *core.Checker) (*types.BatchCheckResult, error) {
-		return checker.CheckByName(ctx, cfg.ContainerNames())
+		return checker.CheckByName(ctx, utils.UniqueDifference(cfg.ContainerNames(), cfg.DisabledContainers()))
 	})
 }
 
 // checkContainersByLabel 根据标签检查镜像更新
 func checkContainersByLabel(ctx context.Context) {
 	labelKey, labelValue := "watchducker.update", "true"
+	cfg := config.Get()
 
 	RunChecker(ctx, func(checker *core.Checker) (*types.BatchCheckResult, error) {
-		return checker.CheckByLabel(ctx, labelKey, labelValue)
+		return checker.CheckByLabel(ctx, labelKey, labelValue, cfg.DisabledContainers())
 	})
 }
 
 // checkAllContainers 检查所有容器的镜像更新
 func checkAllContainers(ctx context.Context) {
+	cfg := config.Get()
+
 	RunChecker(ctx, func(checker *core.Checker) (*types.BatchCheckResult, error) {
-		return checker.CheckAll(ctx)
+		return checker.CheckAll(ctx, cfg.DisabledContainers())
 	})
 }
 

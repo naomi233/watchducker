@@ -7,6 +7,7 @@ RUN apk add --no-cache tzdata ca-certificates
 
 ENV TZ=UTC
 
+COPY $TARGETPLATFORM/watchducker /app
 COPY docker/entrypoint.sh /usr/local/bin/entrypoint.sh
 COPY push.yaml.example /app
 

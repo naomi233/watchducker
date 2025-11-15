@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"strings"
 
 	"watchducker/pkg/logger"
 
@@ -11,15 +12,16 @@ import (
 
 // Config 全局配置结构体
 type Config struct {
-	checkLabel     bool     `mapstructure:"label"`
-	checkAll       bool     `mapstructure:"all"`
-	runOnce        bool     `mapstructure:"-"`
-	cronExpression string   `mapstructure:"cron"`
-	containerNames []string `mapstructure:"-"` // 位置参数，不通过mapstructure绑定
-	noRestart      bool     `mapstructure:"no_restart"`
-	cleanUp        bool     `mapstructure:"clean_up"`
-	logLevel       string   `mapstructure:"log_level"`
-	includeStopped bool     `mapstructure:"include_stopped"`
+	checkLabel         bool     `mapstructure:"label"`
+	checkAll           bool     `mapstructure:"all"`
+	runOnce            bool     `mapstructure:"-"`
+	cronExpression     string   `mapstructure:"cron"`
+	containerNames     []string `mapstructure:"-"` // 位置参数，不通过mapstructure绑定
+	noRestart          bool     `mapstructure:"no_restart"`
+	cleanUp            bool     `mapstructure:"clean_up"`
+	logLevel           string   `mapstructure:"log_level"`
+	includeStopped     bool     `mapstructure:"include_stopped"`
+	disabledContainers string   `mapstructure:"disabled_containers"`
 }
 
 // 全局配置实例（只读，初始化后不可修改）
@@ -86,6 +88,11 @@ func (c *Config) CleanUp() bool {
 	return c.cleanUp
 }
 
+// DisabledContainers 获取被排除的容器列表
+func (c *Config) DisabledContainers() []string {
+	return strings.Split(c.disabledContainers, ",")
+}
+
 // IncludeStopped 获取 IncludeStopped 配置
 func (c *Config) IncludeStopped() bool {
 	return c.includeStopped
@@ -105,6 +112,7 @@ func loadConfig() (*Config, error) {
 	v.SetDefault("cron", "0 2 * * *")
 	v.SetDefault("clean", false)
 	v.SetDefault("include-stopped", false)
+	v.SetDefault("disabled-containers", "")
 
 	// 设置命令行参数
 	pflag.Bool("label", false, "检查所有带有 watchducker.update=true 标签的容器")
@@ -114,6 +122,7 @@ func loadConfig() (*Config, error) {
 	pflag.String("cron", "0 2 * * *", "定时执行，使用标准 cron 表达式格式")
 	pflag.Bool("clean", false, "更新容器后自动清理悬空镜像")
 	pflag.Bool("include-stopped", false, "检查时包含已停止的容器")
+	pflag.String("disabled-containers", "", "排除指定的容器，不进行检查和更新")
 
 	// 解析命令行参数
 	pflag.Parse()
@@ -121,7 +130,6 @@ func loadConfig() (*Config, error) {
 	// 绑定命令行参数到 Viper
 	v.BindPFlags(pflag.CommandLine)
 
-	// 创建配置实例
 	config := &Config{
 		checkLabel:     v.GetBool("label"),
 		checkAll:       v.GetBool("all"),
@@ -129,10 +137,11 @@ func loadConfig() (*Config, error) {
 		runOnce:        v.GetBool("once"),
 		cronExpression: v.GetString("cron"),
 		// 获取位置参数（容器名称）
-		containerNames: pflag.Args(),
-		cleanUp:        v.GetBool("clean"),
-		logLevel:       v.GetString("LOG_LEVEL"),
-		includeStopped: v.GetBool("include-stopped"),
+		containerNames:     pflag.Args(),
+		cleanUp:            v.GetBool("clean"),
+		logLevel:           v.GetString("LOG_LEVEL"),
+		includeStopped:     v.GetBool("include-stopped"),
+		disabledContainers: v.GetString("disabled-containers"),
 	}
 
 	// 设置日志级别
@@ -165,22 +174,24 @@ func PrintUsage() {
 	fmt.Println("  watchducker [选项] [容器名称...]")
 	fmt.Println()
 	fmt.Println("选项:")
-	fmt.Println("  --label       检查所有带有 watchducker.update=true 标签的容器")
-	fmt.Println("  --all         检查所有容器，无论是否带有标签")
-	fmt.Println("  --no-restart  只更新镜像，不重启容器")
-	fmt.Println("  --cron        定时执行，使用标准 cron 表达式格式，默认为 \"0 2 * * *\"")
-	fmt.Println("  --once        只执行一次检查和更新，然后退出")
-	fmt.Println("  --clean       更新容器后自动清理悬空镜像")
-	fmt.Println("  --include-stopped 检查时包含已停止的容器（默认仅检查运行中容器）")
+	fmt.Println("  --label               检查所有带有 watchducker.update=true 标签的容器")
+	fmt.Println("  --all                 检查所有容器，无论是否带有标签")
+	fmt.Println("  --no-restart          只更新镜像，不重启容器")
+	fmt.Println("  --cron                定时执行，使用标准 cron 表达式格式，默认为 \"0 2 * * *\"")
+	fmt.Println("  --once                只执行一次检查和更新，然后退出")
+	fmt.Println("  --clean               更新容器后自动清理悬空镜像")
+	fmt.Println("  --include-stopped     检查时包含已停止的容器（默认仅检查运行中容器）")
+	fmt.Println("  --disabled-containers 排除指定的容器，不进行检查和更新")
 	fmt.Println()
 	fmt.Println("环境变量:")
-	fmt.Println("  WATCHDUCKER_LABEL        等同于 --label 选项")
-	fmt.Println("  WATCHDUCKER_ALL          等同于 --all 选项")
-	fmt.Println("  WATCHDUCKER_NO_RESTART   等同于 --no-restart 选项")
-	fmt.Println("  WATCHDUCKER_CRON         等同于 --cron 选项，默认为 0 2 * * *")
-	fmt.Println("  WATCHDUCKER_CLEAN        等同于 --clean 选项")
-	fmt.Println("  WATCHDUCKER_INCLUDE_STOPPED  等同于 --include-stopped 选项")
-	fmt.Println("  WATCHDUCKER_LOG_LEVEL    设置日志级别 (DEBUG/INFO/WARN/ERROR)")
+	fmt.Println("  WATCHDUCKER_LABEL               等同于 --label 选项")
+	fmt.Println("  WATCHDUCKER_ALL                 等同于 --all 选项")
+	fmt.Println("  WATCHDUCKER_NO_RESTART          等同于 --no-restart 选项")
+	fmt.Println("  WATCHDUCKER_CRON                等同于 --cron 选项，默认为 0 2 * * *")
+	fmt.Println("  WATCHDUCKER_CLEAN               等同于 --clean 选项")
+	fmt.Println("  WATCHDUCKER_INCLUDE_STOPPED     等同于 --include-stopped 选项")
+	fmt.Println("  WATCHDUCKER_DISABLED_CONTAINERS 等同于 --disabled-containers 选项")
+	fmt.Println("  WATCHDUCKER_LOG_LEVEL           设置日志级别 (DEBUG/INFO/WARN/ERROR)")
 	fmt.Println()
 	fmt.Println("参数:")
 	fmt.Println("  要检查的容器名称列表（支持多个）  <容器1> <容器2> ... ")
@@ -202,13 +213,11 @@ func PrintUsage() {
 	fmt.Println("  export WATCHDUCKER_CRON=\"0 2 * * *\"")
 	fmt.Println()
 	fmt.Println("  # 定时执行示例")
-	fmt.Println("  watchducker --cron \"0 2 * * *\" --label          # 每天凌晨2点检查所有标签容器")
-	fmt.Println("  watchducker --cron \"*/30 * * * *\" nginx redis   # 每30分钟检查指定容器")
-	fmt.Println("  watchducker --cron \"@daily\" --all               # 每天检查所有容器")
-	fmt.Println("  watchducker --cron \"@daily\" --no-restart        # 每天执行，只检查不重启")
-	fmt.Println("  watchducker --cron \"@daily\" --clean             # 每天执行并清理悬空镜像")
+	fmt.Println("  watchducker --cron \"0 2 * * *\" --label --clean                # 每天凌晨2点检查更新所有标签容器，清理悬空镜像")
+	fmt.Println("  watchducker --cron \"*/30 * * * *\" nginx redis                 # 每30分钟检查更新指定nginx、redis容器")
+	fmt.Println("  watchducker --cron \"@daily\" --all --disabled-containers mysql # 每天检查更新所有容器，但排除mysql")
 	fmt.Println()
-	fmt.Println("说明:")
+	fmt.Println("说明:") 
 	fmt.Println("  - 优先级：指定容器 > --label > --all")
 	fmt.Println("  - 环境变量优先级低于命令行参数")
 }
