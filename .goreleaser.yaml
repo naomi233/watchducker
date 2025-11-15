@@ -38,4 +38,5 @@ dockers_v2:
       - linux/arm64
 
     extra_files:
+      - docker/entrypoint.sh
       - push.yaml.example
