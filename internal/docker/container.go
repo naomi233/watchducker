@@ -150,6 +150,21 @@ func (cs *ContainerService) RemoveContainer(ctx context.Context, containerID str
 	return nil
 }
 
+// RenameContainer 重命名容器
+func (cs *ContainerService) RenameContainer(ctx context.Context, containerID, newName string) error {
+	cli := cs.clientManager.GetClient()
+
+	logger.Debug("正在重命名容器: %s -> %s", containerID[:12], newName)
+
+	if err := cli.ContainerRename(ctx, containerID, newName); err != nil {
+		logger.Error("重命名容器 %s 失败: %v", containerID[:12], err)
+		return fmt.Errorf("重命名容器 %s 失败: %w", containerID[:12], err)
+	}
+
+	logger.Debug("容器 %s 已成功重命名为 %s", containerID[:12], newName)
+	return nil
+}
+
 // StartContainer 启动容器
 func (cs *ContainerService) StartContainer(ctx context.Context, containerID string) error {
 	cli := cs.clientManager.GetClient()

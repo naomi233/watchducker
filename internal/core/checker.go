@@ -256,9 +256,8 @@ func (c *Checker) extractImageReferences(ctx context.Context, containers []types
 			continue
 		}
 
-		// 忽略自身镜像更新检查
+		// 跳过 WatchDucker 自身的镜像
 		if normalized == "naomi233/watchducker" || strings.Contains(normalized, "naomi233/watchducker:") {
-			logger.Info("忽略自身镜像检查: %s (容器: %s)", normalized, container.Name)
 			continue
 		}
 

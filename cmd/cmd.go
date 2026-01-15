@@ -147,4 +147,12 @@ func RunChecker(ctx context.Context, checkFunc func(*core.Checker) (*types.Batch
 	// 输出最终结果
 	utils.PrintContainerList(result.Containers)
 	utils.PrintBatchSummary(result)
+
+	selfUpdater, err := core.NewSelfUpdater()
+	if err != nil {
+		logger.Fatal("创建自我更新器失败: %v", err)
+	}
+	defer selfUpdater.Close()
+
+	selfUpdater.SelfUpdate(ctx)
 }

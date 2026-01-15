@@ -1,5 +1,19 @@
 package utils
 
+import (
+	"math/rand"
+)
+
+// GenerateRandomString 生成指定长度的随机字符串
+func GenerateRandomString(length int) string {
+	const charset = "abcdefghijklmnopqrstuvwxyz0123456789"
+	b := make([]byte, length)
+	for i := range b {
+		b[i] = charset[rand.Intn(len(charset))]
+	}
+	return string(b)
+}
+
 // UniqueDifference 返回(a-b)差集列表
 func UniqueDifference(a, b []string) []string {
 	bSet := make(map[string]bool)
