@@ -121,6 +121,9 @@ func loadConfig() (*Config, error) {
 	v.SetDefault("include-stopped", false)
 	v.SetDefault("disabled-containers", "")
 
+	// 环境变量键名中的连字符替换为下划线
+	v.SetEnvKeyReplacer(strings.NewReplacer("-", "_"))
+
 	// 设置命令行参数
 	pflag.Bool("all", false, "检查所有容器，无论是否带有标签")
 	pflag.Bool("label", false, "检查带有 watchducker.update=true 标签的容器")
